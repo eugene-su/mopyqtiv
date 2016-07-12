@@ -1262,7 +1262,7 @@ class MainWindow(QWidget):
                 self.turn_right(self.current_image)
 
             elif event.key() == Qt.Key_L:
-                self.turn_left(self.current_imпрограмма для просмотра изображенийage)
+                self.turn_left(self.current_image)
 
         elif event.key() == Qt.Key_Right or event.key() == Qt.Key_Down:
             self.next_image()

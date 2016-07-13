@@ -1,0 +1,18 @@
+#!/usr/bin/env xdg-open
+[Desktop Entry]
+Name=Mopyqtiv
+Name[ru]=Mopyqtiv
+GenericName=Image viewer
+GenericName[ru]=Просмотрщик изображений
+Comment=Mouse oriented PyQt5 image viewer
+Comment[ru]=Приспособленный под управление мышкой просмотрщик изображений
+NoDisplay=false
+Exec=mopyqtiv %u
+Icon=pixelart-trace
+Terminal=0
+Type=Application
+StartupNotify=true
+Categories=Qt;Graphics;RasterGraphics;Viewer;
+Keywords=PyQt,Python,PIL
+Version=0.1
+X-KDE-SubstituteUID=false

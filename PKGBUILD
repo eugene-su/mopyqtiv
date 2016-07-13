@@ -17,12 +17,12 @@ package() {
 
     cd ${pkgname}
 
-    mkdir -p "$pkgdir/usr/bin"
-    install -m755 mopyqtiv "$pkgdir/usr/bin"
-
+    install -m755 -D mopyqtiv "$pkgdir/usr/bin/mopyqtiv"
+    
     gzip -9 mopyqtiv.1
-    mkdir -p "$pkgdir/usr/share/man/ru/man1/"
-    install -m755 mopyqtiv.1.gz "$pkgdir/usr/share/man/ru/man1/"
+    install -m644 -D mopyqtiv.1.gz "$pkgdir/usr/share/man/ru/man1/mopyqtiv.1.gz"
+    
+    install -m644 -D mopyqtiv.desktop "$pkgdir/usr/share/applications/mopyqtiv.desktop"
 }
 
 # vim: set ts=4 sw=4 tw=0 noet :

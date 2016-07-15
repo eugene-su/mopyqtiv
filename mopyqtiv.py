@@ -33,7 +33,7 @@ from PyQt5.QtGui import (QIcon, QPalette, QColor,
 
 from PyQt5.QtWidgets import (QWidget, QMenu, QLabel, QScrollArea,
                              QApplication, QFileDialog,QAction,
-                             QVBoxLayout, QLayout, qApp
+                             QVBoxLayout, QLayout, QInputDialog, qApp
                              )
 
 from PyQt5.QtCore import Qt, QThread, QFileInfo, QTimer
@@ -156,6 +156,12 @@ class PopupMenu(QMenu):
                 self
         )
 
+        rename_action = QAction(
+                QIcon.fromTheme('edit-rename'),
+                'Переименовать',
+                self
+        )
+
         trash_action = QAction(
                 QIcon.fromTheme('trash-empty'),
                 'Отправить в корзину',
@@ -169,11 +175,13 @@ class PopupMenu(QMenu):
         )
 
         info_action.triggered.connect(self.show_info)
+        rename_action.triggered.connect(self.rename_img)
         trash_action.triggered.connect(lambda: self.main.trash(self.file))
         exit_action.triggered.connect(sys.exit)
 
         # сборка выпадающего меню
         self.addAction(info_action)
+        self.addAction(rename_action)
         self.addAction(trash_action)
         self.addSeparator()
         self.addAction(exit_action)
@@ -214,6 +222,34 @@ class PopupMenu(QMenu):
 
         else:
             return str(round(size / 1048576, 1)), 'Мб'
+
+    def rename_img(self):
+        """
+        Показывает диалог для переименовывания файла
+        """
+        file_name = os.path.split(self.file)[1]
+        text, accepted = QInputDialog.getText(self,
+                                              "Переименовывание файла",
+                                              "Введите новое имя файла",
+                                              text=file_name
+                                              )
+        if accepted and text > '':
+            new_file_path = os.path.join(os.path.split(self.file)[0], text)
+
+            # переименовывание файла оригинала
+            shutil.move(self.file, new_file_path)
+
+            # корректировка списка файлов
+            for i, file in enumerate(self.main.filer.files):
+                if file == self.file:
+                    self.main.filer.files[i] = new_file_path
+
+            # корректировка виджета миниатюры
+            for miniature in self.main.miniatures_handler.list_miniatures_widgets():
+                if miniature.original_file == self.file:
+                    miniature.original_file = new_file_path
+
+            self.main.current_image = new_file_path
 
 
 class InfoLabel(QLabel):

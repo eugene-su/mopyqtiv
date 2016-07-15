@@ -1249,32 +1249,32 @@ class MainWindow(QWidget):
         """
         Обработка нажатий клавиш клавиатуры
         """
-        # с модификатором control
-        if event.modifiers() == Qt.ControlModifier:
-
-            if event.key() == Qt.Key_R:
-                self.turn_right(self.current_image)
-
-            elif event.key() == Qt.Key_L:
-                self.turn_left(self.current_image)
-
-        elif event.key() == Qt.Key_Right or event.key() == Qt.Key_Down:
+        if event.key() == Qt.Key_Right or event.key() == Qt.Key_Down:
             self.next_image()
 
-        elif event.key() == Qt.Key_Left or event.key() == Qt.Key_Up:
+        if event.key() == Qt.Key_Left or event.key() == Qt.Key_Up:
             self.previous_image()
 
-        elif event.key() == Qt.Key_Delete:
+        # поворот изображения
+        if event.modifiers() == Qt.ControlModifier \
+                and event.key() == Qt.Key_R:
+            self.turn_right(self.current_image)
+
+        if event.modifiers() == Qt.ControlModifier \
+                and event.key() == Qt.Key_L:
+            self.turn_left(self.current_image)
+
+        if event.key() == Qt.Key_Delete:
             self.trash(self.current_image)
 
-        elif event.key() == Qt.Key_Backspace:
+        if event.key() == Qt.Key_Backspace:
             self.choose_file()
 
-        elif event.key() == Qt.Key_Escape or event.key() == Qt.Key_Q:
+        if event.key() == Qt.Key_Escape or event.key() == Qt.Key_Q:
             sys.exit(0)
 
         # обработчик сортировки по горячим клавишам
-        elif event.key() in self.keys_for_bindings:
+        if event.key() in self.keys_for_bindings:
             self.work_bind(event)
 
         event.accept()

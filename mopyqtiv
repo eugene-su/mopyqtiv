@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 ##########################################################################
@@ -25,11 +25,18 @@ import atexit  # для удаления временных файлов при 
 import hashlib  # для рандомных имён времнных папок
 
 from PIL import Image
-from multiprocessing import Pool, Process, Pipe
+from multiprocessing import Pool, Pipe
 
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+from PyQt5.QtGui import (QIcon, QPalette, QColor,
+                         QFont, QPixmap, QCursor
+                         )
+
+from PyQt5.QtWidgets import (QWidget, QMenu, QLabel, QScrollArea,
+                             QApplication, QFileDialog,QAction,
+                             QVBoxLayout, QLayout, qApp
+                             )
+
+from PyQt5.QtCore import Qt, QThread, QFileInfo, QTimer
 
 ###################################################
 ############### EDIT VARIABLES HERE ###############
@@ -68,7 +75,7 @@ class Filer:
         """
         self.files = []  # очистка списка изображений
         for name in os.listdir(path):
-            if name[-4:].lower() in self.available_extensions:  # фильтр по расширению
+            if os.path.splitext(name)[1].lower() in self.available_extensions:  # фильтр по расширению
                 self.files.append(os.path.join(path, name))
         self.files = list(set(self.files))  # не допускает дубликатов
         self.files.sort()
@@ -295,21 +302,8 @@ class MiniaturesFolderHandler:
     """
 
     def __init__(self):
-        self.folder = ''
-        self.update_folder_name()
+        self.folder = '/tmp/mopyqtiv.' + hashlib.sha1(os.urandom(8)).hexdigest()[:8]
         self.create_folder()
-
-    def random_name(self):
-        """
-        Возвращает путь временной папки для миниатюр со случайной частью в имени
-        """
-        return '/tmp/mopyqtiv.' + hashlib.sha1(os.urandom(8)).hexdigest()[:8]
-
-    def update_folder_name(self):
-        """
-        Обновлает имя временной папки для миниатюр
-        """
-        self.folder = self.random_name()
 
     def create_folder(self):
         """

@@ -28,7 +28,7 @@ from PIL import Image
 from multiprocessing import Pool, Pipe
 
 from PyQt5.QtGui import (QIcon, QPalette, QColor,
-                         QFont, QPixmap, QCursor
+                         QFont, QPixmap, QCursor, QTransform
                          )
 
 from PyQt5.QtWidgets import (QWidget, QMenu, QLabel, QScrollArea,

@@ -3,7 +3,7 @@
 
 pkgname=mopyqtiv
 pkgver=0.1
-pkgrel=1
+pkgrel=2
 pkgdesc='Mouse oriented PyQt5 image viewer'
 arch=('i686' 'x86_64')
 url="https://github.com/inaugurator/mopyqtiv"
@@ -17,12 +17,12 @@ package() {
 
     cd ${pkgname}
 
-    install -m755 -D mopyqtiv.py "$pkgdir/usr/bin/mopyqtiv.py"
+    install -m755 -D "${pkgname}.py" "$pkgdir/usr/bin/mopyqtiv.py"
     
-    gzip -9 mopyqtiv.1
-    install -m644 -D mopyqtiv.1.gz "$pkgdir/usr/share/man/ru/man1/mopyqtiv.1.gz"
+    gzip -9 "${pkgname}.1"
+    install -m644 -D "${pkgname}.1.gz" "$pkgdir/usr/share/man/ru/man1/mopyqtiv.1.gz"
     
-    install -m644 -D mopyqtiv.desktop "$pkgdir/usr/share/applications/mopyqtiv.desktop"
+    install -m644 -D "${pkgname}.desktop" "$pkgdir/usr/share/applications/mopyqtiv.desktop"
 }
 
 # vim: set ts=4 sw=4 tw=0 noet :

@@ -25,7 +25,7 @@ Requires:       python3-PyQt5
 # Nothing to build
 
 %install
-install -Dpm0755 %{name} %{buildroot}%{_bindir}/%{name}
+install -Dpm0755 %{name}.py %{buildroot}%{_bindir}/%{name}.py
 install -Dpm0644 %{name}.1 %{buildroot}%{_mandir}/man1/%{name}.1
 install -Dpm0644 %{name}.desktop %{buildroot}%{_datadir}/applications/%{name}.desktop
 

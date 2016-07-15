@@ -1252,7 +1252,6 @@ class MainWindow(QWidget):
         """
         Обработка нажатий клавиш клавиатуры
         """
-        print(event.key())
         if event.key() == Qt.Key_Right or event.key() == Qt.Key_Down:
             self.next_image()
 

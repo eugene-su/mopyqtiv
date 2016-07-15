@@ -494,6 +494,9 @@ class MiniaturesScroller(QScrollArea):
         self.miniatures_area = main.miniatures_area
         self.setWidget(self.miniatures_area)
 
+        # чтобы работали стрелки
+        self.setFocusPolicy(Qt.NoFocus)
+
         # настройка внешнего вида
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
@@ -1249,6 +1252,7 @@ class MainWindow(QWidget):
         """
         Обработка нажатий клавиш клавиатуры
         """
+        print(event.key())
         if event.key() == Qt.Key_Right or event.key() == Qt.Key_Down:
             self.next_image()
 

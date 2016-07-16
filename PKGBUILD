@@ -17,7 +17,7 @@ package() {
 
     cd ${pkgname}
 
-    install -m755 -D "${pkgname}.py" "$pkgdir/usr/bin/mopyqtiv.py"
+    install -m755 -D "${pkgname}" "$pkgdir/usr/bin/mopyqtiv"
     
     gzip -9 "${pkgname}.1"
     install -m644 -D "${pkgname}.1.gz" "$pkgdir/usr/share/man/ru/man1/mopyqtiv.1.gz"

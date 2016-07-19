@@ -1,5 +1,5 @@
 Name:           mopyqtiv
-Version:        0.1
+Version:        0.2
 Release:        1%{?dist}
 Summary:        Mouse oriented PyQt5 image viewer
 

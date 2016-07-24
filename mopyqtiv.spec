@@ -1,5 +1,5 @@
 Name:           mopyqtiv
-Version:        0.2
+Version:        0.3
 Release:        1%{?dist}
 Summary:        Mouse oriented PyQt5 image viewer
 
@@ -28,6 +28,7 @@ Requires:       python3-PyQt5
 install -Dpm0755 %{name} %{buildroot}%{_bindir}/%{name}
 install -Dpm0644 %{name}.1 %{buildroot}%{_mandir}/man1/%{name}.1
 install -Dpm0644 %{name}.desktop %{buildroot}%{_datadir}/applications/%{name}.desktop
+install -Dpm0644 config.ini %{buildroot}/etc/%{name}/config.ini
 
 %check
 desktop-file-validate %{buildroot}%{_datadir}/applications/%{name}.desktop

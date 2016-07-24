@@ -1823,6 +1823,10 @@ def mopyqtiv_help():
 
 
 if __name__ == '__main__':
+    if os.name == 'nt':
+        print('Программа предназначена для операционной системы Linux.')
+        sys.exit(0)
+
     if '-h' in sys.argv:
         mopyqtiv_help()
         sys.exit(0)

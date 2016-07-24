@@ -8,8 +8,8 @@
 По умолчанию работает программная отрисовка графики. По желанию можно переключить в режим OpenGL.
 
 ### Снимки экрана
-![screenshot_normal](/screenshots/normal.png?raw=true "Во весь экран")
-![screenshots_small](/screenshots/small.png?raw=true "В маленьком окне")
+![screenshot_normal](/screenshots/normal.jpg?raw=true "Во весь экран")
+![screenshots_small](/screenshots/small.jpg?raw=true "В маленьком окне")
 ### Лицензия
 
 **mopyqtiv** публикуется под лицензией Apache License, Version 2.0.

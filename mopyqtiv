@@ -33,8 +33,8 @@ from PIL import Image
 from multiprocessing import Pool, Pipe, Process, Value
 
 from PyQt5.QtGui import (QIcon, QPalette, QColor,
-                         QFont, QPixmap, QCursor, QTransform,
-                         QBrush
+                         QFont, QPixmap, QCursor,
+                         QTransform, QBrush
                          )
 
 from PyQt5.QtWidgets import (QWidget, QMenu, QLabel, QScrollArea,
@@ -55,9 +55,11 @@ class Filer:
     Этот класс создаёт и обновляет список файлов
     """
 
-    def __init__(self):
+    def __init__(self, start_image):
         self.files = []
-        self.current_folder = os.getcwd()  # запись текущей папки
+        self.current_folder = os.path.abspath(
+                os.path.split(start_image)[0]
+        )  # запись текущей папки
         self.dialog = QFileDialog()  # диалог выбора файлов
         self.available_extensions = ('.bmp', '.pbm', '.pgm', '.ppm', '.xbm',
                                      '.xpm', '.jpg', '.jpeg', '.png', '.gif'
@@ -68,12 +70,17 @@ class Filer:
         создаёт список изобр. папки -> self.files
         """
         self.files = []  # очистка списка изображений
-        for name in os.listdir(path):
-            # фильтр по расширению
-            if os.path.splitext(name)[1].lower() in self.available_extensions:
-                self.files.append(os.path.join(path, name))
-        self.files = list(set(self.files))  # не допускает дубликатов
-        self.files.sort()
+        try:
+            for name in os.listdir(path):
+                # фильтр по расширению
+                if os.path.splitext(name)[1].lower() in self.available_extensions:
+                    self.files.append(os.path.join(path, name))
+            self.files = list(set(self.files))  # не допускает дубликатов
+            self.files.sort()
+
+        except FileNotFoundError:
+            print('mopyqtiv: нет такого файла или каталога.')
+            sys.exit(0)
 
     def choose_file(self):
         """
@@ -93,14 +100,14 @@ class Filer:
 
         return file_path
 
-    def choose_folder(self, folder):
+    def choose_folder(self):
         """
         Диалог выбора папки: возвращает полный путь
         """
         folder_path = self.dialog.getExistingDirectory(
                 parent=None,
                 caption='Выбор папки для сортировки',
-                directory=folder
+                directory=self.current_folder
         )
 
         return folder_path
@@ -148,7 +155,7 @@ class Bind:
 
 class Turner:
     """
-    Поворачивает список изображений
+    Поворачивает изображение и его миниатюру
     """
 
     def __init__(self):
@@ -337,7 +344,7 @@ class PopupMenu(QMenu):
                     miniature.original_file = new_file_path
                     break
 
-            self.main.current_image = new_file_path
+            self.main.update_current_image(new_file_path)
             self.main.short_info.update()
 
 
@@ -414,7 +421,8 @@ class ShortInfo(InfoLabel):
         width = self.main.imageviewer.current_pixmap.width()
         height = self.main.imageviewer.current_pixmap.height()
         self.setText(
-                '<font color="#00ff00">{0}  {1}x{2}  {3} {4}   {5}/{6}</font>'.format(
+                '<font color="#00ff00">'
+                '{0}  {1}x{2}  {3} {4}   {5}/{6}</font>'.format(
                         file_name, width, height, size[0], size[1], index, count
                 )
         )
@@ -437,6 +445,14 @@ class Miniature(QLabel):
         self.image = QPixmap()
         self.setAttribute(Qt.WA_TranslucentBackground)
 
+        # подсветка активной миниатюры
+        self.shadow = QGraphicsDropShadowEffect()
+        self.shadow.setBlurRadius(10)
+        self.shadow.setColor(QColor("#00FFFF"))
+        self.shadow.setOffset(-2, 0)
+        self.setGraphicsEffect(self.shadow)
+        self.shadow.setEnabled(False)
+
         # настройка выпадающего меню
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.context_menu)
@@ -446,7 +462,7 @@ class Miniature(QLabel):
         Установка картинки по щелчку на миниатюре
         """
         if event.button() == Qt.LeftButton:
-            self.main.current_image = self.original_file
+            self.main.update_current_image(self.original_file)
             self.main.imageviewer.set_image(self.main.current_image,
                                             self.main.imageviewer.scale_default
                                             )
@@ -457,6 +473,18 @@ class Miniature(QLabel):
         """
         self.main.popup.file = self.original_file
         self.main.popup.exec_(QCursor.pos())
+
+    def activate(self):
+        """
+        Применяет эффект тени на миниатюру
+        """
+        self.shadow.setEnabled(True)
+
+    def deactivate(self):
+        """
+        Отключает эффект тени
+        """
+        self.shadow.setEnabled(False)
 
 
 class MiniaturesFolderHandler:
@@ -548,16 +576,15 @@ class MiniaturesMakerThread(QThread):
         self.main = main
 
     def run(self):
-        self.handler = self.main.miniatures_handler
-        self.maker = self.main.miniatures_handler.miniatures_maker
-        self.folder_handler = self.main.miniatures_handler.miniatures_folder_handler
+        maker = self.main.miniatures_handler.miniatures_maker
+        folder_handler = self.main.miniatures_handler.miniatures_folder_handler
 
-        self.maker.files = self.main.filer.files
-        self.maker.folder = self.folder_handler.folder
+        maker.files = self.main.filer.files
+        maker.folder = folder_handler.folder
 
         # разблокировка
         STOP_FLAG.value = 0
-        self.maker.create_miniatures()
+        maker.create_miniatures()
 
 
 class MiniaturesSetter(QThread):
@@ -610,6 +637,7 @@ class MiniaturesScroller(QScrollArea):
 
     def __init__(self, main):
         super().__init__(main)
+        self.main = main
 
         # наложение прокрутки
         self.miniatures_area = main.miniatures_area
@@ -621,6 +649,21 @@ class MiniaturesScroller(QScrollArea):
         # настройка ползунков
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+
+    def follow_view(self):
+        """
+        Прокручивает миниатюры в соответствии с текущей картинкой
+        """
+        # текущее положение картинки
+        position = 0
+        for miniature in self.main.miniatures_handler.list_miniatures_widgets():
+            if miniature.original_file == self.main.current_image:
+                position = miniature.pos().y()
+                break
+
+        position -= self.main.frame_resolution_height / 3
+        if self.isHidden() is True:
+            self.verticalScrollBar().setValue(position)
 
 
 class MiniaturesHandler(QObject):
@@ -677,13 +720,33 @@ class MiniaturesHandler(QObject):
                            miniature.image.height()
 
         miniature.setPixmap(
-                miniature.image.scaled(
-                        miniature_width,
-                        miniature_height,
-                        Qt.KeepAspectRatio,
-                        Qt.FastTransformation
-                )
+                miniature.image.scaled(miniature_width,
+                                       miniature_height,
+                                       Qt.KeepAspectRatio,
+                                       Qt.FastTransformation
+                                       )
         )
+
+    def highlight(self):
+        """
+        Выделяет миниатюру текущей картинки
+        Сбрасывает выделение с предыдущей
+        """
+        if self.main.last_image == self.main.current_image:
+            return
+
+        i = 0
+        for miniature in self.list_miniatures_widgets():
+            if miniature.original_file == self.main.last_image:
+                miniature.deactivate()
+                i += 1
+
+            elif miniature.original_file == self.main.current_image:
+                miniature.activate()
+                i += 1
+
+            elif i == 2:
+                break
 
     def resize_miniatures(self, coefficient):
         """
@@ -887,6 +950,8 @@ class ImageViewer(QGraphicsView):
         self.rotate_widget(0)
         if SHOW_SHORT_INFO == 'Yes':
             self.main.short_info.update()
+        self.main.miniatures_handler.highlight()
+        self.main.miniatures_scroller.follow_view()
         self.main.change_title(os.path.split(self.main.current_image)[1])
 
     def set_img_center(self):
@@ -1034,23 +1099,33 @@ class ImageViewer(QGraphicsView):
         scale = self.full_size_image_scale()
         self.set_image(self.main.current_image, scale)
 
-    def increase_in_size(self):
+    def increase_in_size(self, ier=1):
         """
         Увеличивает размер текущего изображения
         на один шаг, равный SCALE_STEP
         """
         if self.current_scale < 10:
-            self.current_scale += SCALE_STEP
+            self.current_scale += SCALE_STEP * ier
             self.set_image(self.main.current_image, self.current_scale)
 
-    def scale_back(self):
+        else:
+            return
+
+    def scale_back(self, ier=1):
         """
         Уменьшает размер текущего изображения
         на один шаг, равный SCALE_STEP
         """
         if self.current_scale > 0.5:
-            self.current_scale -= SCALE_STEP
+            self.current_scale -= SCALE_STEP * ier
+
+            if self.current_scale < 0.5:
+                self.current_scale = 0.5
+
             self.set_image(self.main.current_image, self.current_scale)
+
+        else:
+            return
 
     def magnifier(self):
         """
@@ -1072,6 +1147,7 @@ class ImageViewer(QGraphicsView):
         vscroll_min = self.verticalScrollBar().minimum()
         vscroll_max = self.verticalScrollBar().maximum() - \
                       vscroll_min
+
         scroll_step_x = hscroll_max / 100
         scroll_step_y = vscroll_max / 100
         mouse_step_x = self.main.frame_resolution_width / 100 / \
@@ -1203,9 +1279,11 @@ class ImageViewer(QGraphicsView):
         if qApp.mouseButtons() != Qt.LeftButton:
             # 20 - кол-во пикселей от правого края,
             # заходя за которые курсором мыши, появится панель миниатюр
-            if QCursor.pos().x() > self.main.pos().x() + self.main.frame_resolution_width - 20:
+            if QCursor.pos().x() > self.main.pos().x() + \
+                    self.main.frame_resolution_width - 20:
                 self.main.miniatures_scroller.show()
-            if QCursor.pos().x() < self.main.pos().x() + self.main.frame_resolution_width - \
+            if QCursor.pos().x() < self.main.pos().x() + \
+                    self.main.frame_resolution_width - \
                     self.main.miniature_current_width:
                 self.main.miniatures_scroller.hide()
 
@@ -1256,6 +1334,7 @@ class MainWindow(QWidget):
         self.binds = []
         self.is_image_altered = False
         self.current_image = os.path.abspath(start_image)
+        self.last_image = self.current_image
         self.program_icon = QIcon.fromTheme('pixelart-trace')
         self.trash_path = os.path.expanduser('~') + '/.local/share/Trash'
         self.miniature_current_width = MINIATURE_WIDTH
@@ -1299,7 +1378,7 @@ class MainWindow(QWidget):
             self.setWindowFlags(Qt.FramelessWindowHint)
 
         # создание экземпляров классов
-        self.filer = Filer()
+        self.filer = Filer(start_image)
         self.info = InfoLabel(self)
         self.popup = PopupMenu(self)
         self.short_info = ShortInfo(self)
@@ -1384,49 +1463,83 @@ class MainWindow(QWidget):
             if for_delete_full_path == self.current_image:
                 self.next_image()
 
-    def next_image(self):
+    def update_current_image(self, image_path):
+        """
+        Обновляет текущую/предыдущую картинки
+        """
+        self.last_image = self.current_image
+        self.current_image = image_path
+
+    def next_image(self, ier=1):
         """
         Установка следующего в списке изображения
         """
-        try:
-            current_index = self.filer.files.index(self.current_image)
-        # если файл отсутствует в списке изображений, пробует открыть последнее
-        except ValueError:
-            current_index = -1
-
+        len_img_list = len(self.filer.files)
         # если изображение в папке нет -> выход
-        if len(self.filer.files) == 0:
+        if len_img_list == 0:
             print('mopyqtiv: не удаётся найти изображения в папке')
             sys.exit(0)
 
-        # если всё нормально -> следующее изображение
-        if current_index <= len(self.filer.files) - 2:
-            self.current_image = self.filer.files[current_index + 1]
+        elif self.current_image in self.filer.files:
+            current_index = self.filer.files.index(self.current_image)
+
         else:
-            self.current_image = self.filer.files[-2]
+            try:
+                current_index = self.filer.files.index(self.last_image)
+            # если файл отсутствует в списке изображений, пробует открыть последнее
+            except ValueError:
+                current_index = -1
 
-        self.imageviewer.set_image(self.current_image,
-                                   self.imageviewer.scale_default
-                                   )
+        # если всё нормально -> следующее изображение
+        if current_index <= len_img_list - 2:
+            new_index = current_index + ier
 
-    def previous_image(self):
+            if new_index > len_img_list - 2:
+                new_index = -1
+
+            self.update_current_image(self.filer.files[new_index])
+            self.imageviewer.set_image(self.current_image,
+                                       self.imageviewer.scale_default
+                                       )
+        else:
+            return
+
+
+    def previous_image(self, ier=1):
         """
         Установка предыдующего в списке изображения
         """
-        try:
-            current_index = self.filer.files.index(self.current_image)
-        # если файл отсутствует в списке изображений -> выход
-        except ValueError:
-            current_index = 0
-
-        if len(self.filer.files) == 0:
+        len_img_list = len(self.filer.files)
+        # если изображение в папке нет -> выход
+        if len_img_list == 0:
             print('mopyqtiv: не удаётся найти изображения в папке')
             sys.exit(0)
 
+        elif len_img_list == 1:
+            return
+
+        if self.current_image in self.filer.files:
+            current_index = self.filer.files.index(self.current_image)
+            # если файл отсутствует в списке изображений -> выход
+        else:
+            try:
+                current_index = self.filer.files.index(self.last_image)
+            except ValueError:
+                current_index = 0
+
         # если всё нормально -> предыдующее изображение
         if current_index > 0:
-            self.current_image = self.filer.files[current_index - 1]
-            self.imageviewer.set_image(self.current_image, self.imageviewer.scale_default)
+            new_index = current_index - ier
+
+            if new_index < 1:
+                new_index = 0
+
+            self.update_current_image(self.filer.files[new_index])
+            self.imageviewer.set_image(self.current_image,
+                                       self.imageviewer.scale_default
+                                       )
+        else:
+            return
 
     def turn_image(self, image_path, degree):
         """
@@ -1475,7 +1588,7 @@ class MainWindow(QWidget):
             return
 
         self.filer.current_folder = os.path.split(file_path)[0]
-        self.current_image = file_path
+        self.update_current_image(file_path)
         self.filer.list_folder(self.filer.current_folder)
         self.imageviewer.set_image(file_path, self.imageviewer.scale_default)
         self.miniatures_handler.purge_all_miniatures()
@@ -1513,7 +1626,7 @@ class MainWindow(QWidget):
         """
         bind = Bind()
         bind.key = key()
-        bind.path = self.filer.choose_folder(os.getcwd())
+        bind.path = self.filer.choose_folder()
 
         if bind.path == '':
             return
@@ -1587,20 +1700,22 @@ class MainWindow(QWidget):
                 self.imageviewer.increase_in_size()
                 self.try_hand_cursor(event)
                 return
-
             elif event.key() == Qt.Key_PageDown:
                 self.imageviewer.scale_back()
                 self.try_hand_cursor(event)
                 return
 
+            # удаление текущей картинки
             elif event.key() == Qt.Key_Delete:
                 self.trash(self.current_image)
                 return
 
+            # окно выбора изображения
             elif event.key() == Qt.Key_Backspace:
                 self.choose_file()
                 return
 
+            # выход из программы
             elif event.key() == Qt.Key_Escape \
                     or event.key() == Qt.Key_Q:
                 sys.exit(0)
@@ -1624,9 +1739,8 @@ class MainWindow(QWidget):
             elif self.imageviewer.is_current_scale_bigger_than_frame() is False:
                 # листание изображений
                 if event.key() == Qt.Key_Right or event.key() == Qt.Key_Down:
-                    if self.current_image != self.filer.files[-1]:
-                        self.next_image()
-                        return
+                    self.next_image()
+                    return
                 elif event.key() == Qt.Key_Left or event.key() == Qt.Key_Up:
                     self.previous_image()
                     return
@@ -1666,54 +1780,39 @@ class MainWindow(QWidget):
         """
         Настройка комбинаций с колёсиком мыши
         """
-        step = event.angleDelta().y()  # -120 колёсико на себя, 120 - от себя
         if self.miniatures_scroller.isVisible() is True:
             return
 
-        # регулировка масштаба + Ctrl
-        elif event.modifiers() == Qt.ControlModifier:
-            if step > 0:
-                self.imageviewer.increase_in_size()
-            elif step < 0:
-                self.imageviewer.scale_back()
-            self.try_hand_cursor(event)
-            return
+        step = event.angleDelta().y()  # -120 колёсико на себя, 120 - от себя
+        ier = int(math.fabs(step) / 120)
 
-        # регулировка масштаба + RightButton
-        if self.imageviewer.rb_held is True:
+        # регулировка масштаба + Ctrl
+        if event.modifiers() == Qt.ControlModifier or \
+                        self.imageviewer.rb_held is True:
             if step > 0:
-                self.imageviewer.increase_in_size()
+                self.imageviewer.increase_in_size(ier)
             elif step < 0:
-                self.imageviewer.scale_back()
+                self.imageviewer.scale_back(ier)
             self.imageviewer.rb_combined = True
             self.try_hand_cursor(event)
             return
 
         # вращение изображения + ShiftModifier
-        elif event.modifiers() == Qt.ShiftModifier:
+        elif event.modifiers() == Qt.ShiftModifier or \
+                        self.imageviewer.lb_held is True:
             if step > 0:
-                self.imageviewer.rotate_widget(-ROTATE_STEP)
+                self.imageviewer.rotate_widget(-ROTATE_STEP * ier)
             elif step < 0:
-                self.imageviewer.rotate_widget(ROTATE_STEP)
-            self.try_hand_cursor(event)
-            return
-
-        # вращение изображения + LeftButton
-        elif self.imageviewer.lb_held is True:
-            if step > 0:
-                self.imageviewer.rotate_widget(-ROTATE_STEP)
-            elif step < 0:
-                self.imageviewer.rotate_widget(ROTATE_STEP)
+                self.imageviewer.rotate_widget(ROTATE_STEP * ier)
             self.try_hand_cursor(event)
             return
 
         # если модификаторов не зажато -> смена картинки
         else:
             if step > 0:
-                self.previous_image()
+                self.previous_image(ier)
             else:
-                if self.current_image != self.filer.files[-1]:
-                    self.next_image()
+                self.next_image(ier)
             # восстановление курсора
             self.setCursor(Qt.ArrowCursor)
 

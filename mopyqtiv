@@ -139,7 +139,7 @@ class Bind:
         self.key = ''
         self.path = ''
 
-    def move(self, image_path):
+    def action(self, image_path):
         """
         Отправляет изображение image_path по адресу destination
         В зависимости от настройки копирует или перемещает
@@ -737,16 +737,16 @@ class MiniaturesHandler(QObject):
 
         i = 0
         for miniature in self.list_miniatures_widgets():
-            if miniature.original_file == self.main.last_image:
+            if i == 2:
+                break
+
+            elif miniature.original_file == self.main.last_image:
                 miniature.deactivate()
                 i += 1
 
             elif miniature.original_file == self.main.current_image:
                 miniature.activate()
                 i += 1
-
-            elif i == 2:
-                break
 
     def resize_miniatures(self, coefficient):
         """
@@ -806,11 +806,6 @@ class MiniaturesHandler(QObject):
                 # удаление виджета миниатюры
                 miniature.deleteLater()
                 break
-
-        # если удаляется последнее в папке изображение
-        if self.layout.count() == 1:
-            print('mopyqtiv: изображений в папке больше нет')
-            sys.exit(0)
 
     def purge_all_miniatures(self):
         """
@@ -948,8 +943,10 @@ class ImageViewer(QGraphicsView):
         )
 
         self.rotate_widget(0)
+
         if SHOW_SHORT_INFO == 'Yes':
             self.main.short_info.update()
+
         self.main.miniatures_handler.highlight()
         self.main.miniatures_scroller.follow_view()
         self.main.change_title(os.path.split(self.main.current_image)[1])
@@ -1193,19 +1190,16 @@ class ImageViewer(QGraphicsView):
             self.verticalScrollBar().setValue(
                     vscroll_cur - (v_key_press_steps * vscroll_step)
             )
-            return
 
         elif direction == 'Down':
             self.verticalScrollBar().setValue(
                     vscroll_cur + (v_key_press_steps * vscroll_step)
             )
-            return
 
         elif direction == 'Right':
             self.horizontalScrollBar().setValue(
                     hscroll_cur + (h_key_press_steps * hscroll_step)
             )
-            return
 
         elif direction == 'Left':
             self.horizontalScrollBar().setValue(
@@ -1428,46 +1422,52 @@ class MainWindow(QWidget):
         if os.path.isdir(self.trash_path):
 
             # при переносе в корзину текущего изображения
-            if file_path == self.current_image \
-                    and file_path != self.filer.files[-1]:
-                self.next_image()
+            if file_path == self.current_image:
+                if file_path == self.filer.files[-1]:
+                    self.previous_image()
 
-            for_delete_full_path = file_path
-            for_delete_file_name = os.path.split(for_delete_full_path)[1]
+                else:
+                    self.next_image()
 
-            # перемещение файла в корзину
-            destination = self.trash_path + '/files/' + for_delete_file_name
-            shutil.move(for_delete_full_path, destination)
+            if file_path in self.filer.files:
+                for_delete_file_name = os.path.split(file_path)[1]
 
-            # создание файла описания удалённого файла
-            date = time.strftime('%Y-%m-%dT%H:%M:%S', time.localtime(time.time()))
-            info_file = self.trash_path + '/info/' + for_delete_file_name + '.trashinfo'
-            info = '[Trash Info]\nPath={0}\nDeletionDate={1}\n'.format(for_delete_full_path, date)
-            with open(info_file, 'w') as info_file:
-                info_file.write(info)
+                # перемещение файла в корзину
+                destination = self.trash_path + '/files/' + for_delete_file_name
+                shutil.move(file_path, destination)
 
-            # удаление файла картинки из списка изображений текущей папки
-            try:
-                self.filer.files.remove(for_delete_full_path)
-            except ValueError:
-                pass
+                # создание файла описания удалённого файла
+                date = time.strftime('%Y-%m-%dT%H:%M:%S', time.localtime(time.time()))
+                info_file = self.trash_path + '/info/' + for_delete_file_name + '.trashinfo'
+                info = '[Trash Info]\nPath={0}\nDeletionDate={1}\n'.format(file_path, date)
+                with open(info_file, 'w') as info_file:
+                    info_file.write(info)
 
-            # удаление его миниатюры
-            self.miniatures_handler.purge_miniature(for_delete_full_path)
+                # удаление файла картинки из списка изображений текущей папки
+                self.filer.files.remove(file_path)
 
-            self.info.show_hint('<font color="#00ff00">Файл «<font color="#ffff00">'
-                                '{0}</font>» перемещен в корзину</font>'.format(
-                    for_delete_file_name)
-            )
+                if len(self.filer.files) == 0:
+                    print('mopyqtiv: изображений в папке больше нет')
+                    sys.exit(0)
 
-            if for_delete_full_path == self.current_image:
-                self.next_image()
+                # удаление его миниатюры
+                self.miniatures_handler.purge_miniature(file_path)
+
+                self.info.show_hint('<font color="#00ff00">Файл «<font color="#ffff00">'
+                                    '{0}</font>» перемещен в корзину</font>'.format(
+                        for_delete_file_name)
+                )
 
     def update_current_image(self, image_path):
         """
         Обновляет текущую/предыдущую картинки
         """
-        self.last_image = self.current_image
+        if self.current_image in self.filer.files:
+            self.last_image = self.current_image
+
+        else:
+            self.last_image = self.filer.files[0]
+
         self.current_image = image_path
 
     def next_image(self, ier=1):
@@ -1503,7 +1503,6 @@ class MainWindow(QWidget):
                                        )
         else:
             return
-
 
     def previous_image(self, ier=1):
         """
@@ -1588,8 +1587,8 @@ class MainWindow(QWidget):
             return
 
         self.filer.current_folder = os.path.split(file_path)[0]
-        self.update_current_image(file_path)
         self.filer.list_folder(self.filer.current_folder)
+        self.update_current_image(file_path)
         self.imageviewer.set_image(file_path, self.imageviewer.scale_default)
         self.miniatures_handler.purge_all_miniatures()
         self.miniatures_handler.set_miniatures()
@@ -1657,23 +1656,39 @@ class MainWindow(QWidget):
         """
         for bind in self.binds:
             if event.key() == bind.key:
-                bind.move(self.current_image)
+                path_for_action = self.current_image
+
+                if COPY_ON_SORTING == 'No':
+                    if self.current_image == self.filer.files[-1]:
+                        self.previous_image()
+
+                    else:
+                        self.next_image()
+
+                    self.filer.files.remove(path_for_action)
+                    self.miniatures_handler.purge_miniature(path_for_action)
+                    message = 'перемещён'
+
+                else:
+                    message = 'скопирован'
+
+                bind.action(path_for_action)
+
+                if len(self.filer.files) == 0:
+                    print('mopyqtiv: изображений в папке больше нет')
+                    sys.exit(0)
 
                 # уведомление о перемещении
-                file_name = os.path.split(self.current_image)[1]
+                file_name = os.path.split(path_for_action)[1]
                 self.info.show_hint(
                         '<font color="#00ff00">Файл «<font color="#ffff00">'
-                        '{0}</font>' '» перемещен в «<font color="#ffff00">'
-                        '{1}</font>»</font>'.format(
-                                file_name,
-                                bind.path
-                        )
+                        '{0}</font>' '» {1} в «<font color="#ffff00">'
+                        '{2}</font>»</font>'.format(file_name,
+                                                    message,
+                                                    bind.path
+                                                    )
                 )
 
-                self.miniatures_handler.purge_miniature(self.current_image)
-                path_for_remove = self.current_image
-                self.next_image()
-                self.filer.files.remove(path_for_remove)
                 return
 
         # иначе создаём связку
@@ -1688,7 +1703,6 @@ class MainWindow(QWidget):
             # обработчик сортировки по горячим клавишам
             if event.key() in self.keys_for_bindings:
                 self.work_bind(event)
-                return
 
             # сброс изменений при просмотре
             elif event.key() == Qt.Key_Space:
@@ -1699,21 +1713,17 @@ class MainWindow(QWidget):
             elif event.key() == Qt.Key_PageUp:
                 self.imageviewer.increase_in_size()
                 self.try_hand_cursor(event)
-                return
             elif event.key() == Qt.Key_PageDown:
                 self.imageviewer.scale_back()
                 self.try_hand_cursor(event)
-                return
 
             # удаление текущей картинки
             elif event.key() == Qt.Key_Delete:
                 self.trash(self.current_image)
-                return
 
             # окно выбора изображения
             elif event.key() == Qt.Key_Backspace:
                 self.choose_file()
-                return
 
             # выход из программы
             elif event.key() == Qt.Key_Escape \
@@ -1725,50 +1735,39 @@ class MainWindow(QWidget):
                 # перемещение стрелками при масштабе
                 if event.key() == Qt.Key_Up:
                     self.imageviewer.arrows_scale_move('Up')
-                    return
                 elif event.key() == Qt.Key_Down:
                     self.imageviewer.arrows_scale_move('Down')
-                    return
                 elif event.key() == Qt.Key_Right:
                     self.imageviewer.arrows_scale_move('Right')
-                    return
                 elif event.key() == Qt.Key_Left:
                     self.imageviewer.arrows_scale_move('Left')
-                    return
 
             elif self.imageviewer.is_current_scale_bigger_than_frame() is False:
                 # листание изображений
                 if event.key() == Qt.Key_Right or event.key() == Qt.Key_Down:
                     self.next_image()
-                    return
                 elif event.key() == Qt.Key_Left or event.key() == Qt.Key_Up:
                     self.previous_image()
-                    return
 
         # сочетания с Shift
         elif event.modifiers() == Qt.ShiftModifier:
             # вращение изображения
             if event.key() == Qt.Key_PageDown:
                 self.imageviewer.rotate_widget(ROTATE_STEP)
-                return
             elif event.key() == Qt.Key_PageUp:
                 self.imageviewer.rotate_widget(-ROTATE_STEP)
-                return
 
         # комбинации с Ctrl
         elif event.modifiers() == Qt.ControlModifier:
             # поворот изображения
             if event.key() == Qt.Key_R:
                 self.turn_right(self.current_image)
-                return
             elif event.key() == Qt.Key_L:
                 self.turn_left(self.current_image)
-                return
 
             # отвязка сортировочных клавиш
             elif event.key() in self.keys_for_bindings:
                 self.unbind_key(event.key)
-                return
 
     def mouseMoveEvent(self, event):
         """
@@ -1926,7 +1925,7 @@ if __name__ == '__main__':
         print('Программа предназначена для операционной системы Linux.')
         sys.exit(0)
 
-    if '-h' in sys.argv:
+    elif '-h' in sys.argv:
         mopyqtiv_help()
         sys.exit(0)
 

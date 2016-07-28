@@ -562,8 +562,12 @@ class MiniaturesMaker:
         pool.close()
         pool.join()
 
+        # разблокировка
+        STOP_FLAG.value = 0
+
         # отправка сообщения о том, что все миниатюры сделаны
         self.conn.send('STOP')
+
 
 
 class MiniaturesMakerThread(QThread):
@@ -709,9 +713,14 @@ class MiniaturesHandler(QObject):
         """
         Создаёт и устанавливает одну миниатюру
         """
-        miniature = self.layout.itemAt(index).widget()
-        miniature.path = miniature_path
-        miniature.original_file = file_path
+        try:
+            miniature = self.layout.itemAt(index).widget()
+            miniature.path = miniature_path
+            miniature.original_file = file_path
+
+        except AttributeError:
+            return
+
         miniature.image.load(miniature_path)
 
         # поправка на изменённый размер окна self.main.coefficient

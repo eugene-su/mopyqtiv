@@ -5,7 +5,7 @@ Summary:        Mouse oriented PyQt5 image viewer
 
 License:        ASL 2.0
 URL:            https://github.com/inaugurator/mopyqtiv
-Source0:        %{url}/archive/%{version}/%{name}-%{version}.tar.gz
+Source0:        %{url}/archive/%{version}.tar.gz
 
 BuildArch:      noarch
 

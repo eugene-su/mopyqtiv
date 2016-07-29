@@ -507,9 +507,9 @@ class MiniaturesFolderHandler:
         """
         Удаляет все относящиеся к программе временные папки в /tmp
         """
-        for name in os.listdir('/tmp'):
-            if 'mopyqtiv' in name:
-                shutil.rmtree(os.path.join('/tmp', name))
+        for name in os.walk(top='/tmp', topdown=False):
+            if 'mopyqtiv' in name[0] and os.path.isdir(name[0]):
+                shutil.rmtree(name[0])
 
 
 class MiniaturesMaker:

@@ -2,7 +2,7 @@
 # Maintainer: Евгений
 
 pkgname=mopyqtiv
-pkgver=0.3
+pkgver=0.3.1
 pkgrel=1
 pkgdesc='Mouse oriented PyQt5 image viewer'
 arch=('any')
@@ -10,8 +10,8 @@ url="https://github.com/inaugurator/mopyqtiv"
 license=('Apache')
 depends=('python-pillow' 'python-pyqt5' 'xdg-utils')
 provides=('mopyqtiv')
-source=('https://github.com/inaugurator/mopyqtiv/archive/0.3.tar.gz')
-sha256sums=('b71ec2b0cdbfd550eb0b159f5d9102f9f5f58b7cc6b895ad01551eda84f31249')
+source=("${url}/archive/${pkgver}.tar.gz")
+sha256sums=('d3440d4be3dc0c177096a9dd5d35bac04cf5767b397bea23eb44d4101f72d9ac')
 
 package() {
 

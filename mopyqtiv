@@ -666,8 +666,7 @@ class MiniaturesScroller(QScrollArea):
                 break
 
         position -= self.main.frame_resolution_height / 3
-        if self.isHidden() is True:
-            self.verticalScrollBar().setValue(position)
+        self.verticalScrollBar().setValue(position)
 
 
 class MiniaturesHandler(QObject):
@@ -957,7 +956,6 @@ class ImageViewer(QGraphicsView):
             self.main.short_info.update()
 
         self.main.miniatures_handler.highlight()
-        self.main.miniatures_scroller.follow_view()
         self.main.change_title(os.path.split(self.main.current_image)[1])
 
     def set_img_center(self):
@@ -1285,6 +1283,7 @@ class ImageViewer(QGraphicsView):
             if QCursor.pos().x() > self.main.pos().x() + \
                     self.main.frame_resolution_width - 20:
                 self.main.miniatures_scroller.show()
+                self.main.miniatures_scroller.follow_view()
             if QCursor.pos().x() < self.main.pos().x() + \
                     self.main.frame_resolution_width - \
                     self.main.miniature_current_width:

@@ -146,6 +146,14 @@ class Bind:
         """
         destination = os.path.join(self.path, os.path.split(image_path)[1])
 
+        # исключение перезаписи конечного файла с тем же именем
+        i = 0
+        path, ext = os.path.splitext(destination)
+        while os.path.isfile(destination):
+            i += 1
+            new_path = path + '_({0})'.format(str(i))
+            destination = new_path + ext
+
         # перемещение или копирование при сортировке
         if COPY_ON_SORTING == 'Yes':
             shutil.copy(image_path, destination)
